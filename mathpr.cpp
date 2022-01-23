@@ -37,12 +37,13 @@ public:
 
 	void printTree(iNode *node);
 
-	void deleteKeyFromTree(unsigned int k);
-	void deleteKey(iNode *node, unsigned int k);
-	iNode* findNodeToDel(iNode *node, unsigned int k);
-	bool leftLeave(iNode *par, int pos_of_key, int pos_as_a_child);
-	bool rightLeave(iNode *par, int pos_of_key, int pos_as_a_child);
-	int unitNodes(iNode *par, int pos);
+    int deleteKeyFromTree(unsigned int k);
+    void checkAfterDeleting(iNode* node, unsigned int del_k);
+    void keyDelAndCheck(iNode* node, unsigned int k);
+    iNode* findNodeToDel(iNode *node, unsigned int k);
+    bool leftLeave(iNode *par, int pos);
+    bool rightLeave(iNode *par, int pos);
+    bool unitNodes(iNode* par, int pos);
 };
 
 iTree::iTree() {
@@ -215,14 +216,23 @@ iNode* iTree::kickOut(iNode *branch_lvl, unsigned int check_key) {
 	for (int i = 0; i < t; i ++) {
 		left->key.push_back(branch_lvl->key[i]);
 		left->children.push_back(branch_lvl->children[i]);
+		if (branch_lvl->children[i] != nullptr) {
+			branch_lvl->children[i]->parent = left;
+		}
 	}
 	cout << "t 2" << endl;
 	left->children.push_back(branch_lvl->children[t]);
+	if (branch_lvl->children[t] != nullptr) {
+		branch_lvl->children[t]->parent = left;
+	}
 	for (int i = t + 1; i < branch_lvl->children.size(); i ++) {
 		if (i < branch_lvl->key.size()) {
 			right->key.push_back(branch_lvl->key[i]);
 		}
 		right->children.push_back(branch_lvl->children[i]);
+		if (branch_lvl->children[i] != nullptr) {
+			branch_lvl->children[i]->parent = right;
+		}
 	}
 	cout << "t 3" << endl;
 	if (left_or_right == -1) {
@@ -273,8 +283,10 @@ iNode* iTree::kickOut(iNode *branch_lvl, unsigned int check_key) {
 			cout << "t 13" << endl;
 			pos -= 1;
 			cout << "pos " << pos << endl;
-			left->parent = branch_lvl->parent;
-			right->parent = branch_lvl->parent;
+			iNode* par = new iNode;
+			par = branch_lvl->parent;
+			left->parent = par;
+			right->parent = par;
 			vector<iNode*> v;
 			for (int i = 0; i < pos; i ++) {
 				v.push_back((branch_lvl->parent)->children[i]);
@@ -285,7 +297,7 @@ iNode* iTree::kickOut(iNode *branch_lvl, unsigned int check_key) {
 				v.push_back((branch_lvl->parent)->children[i]);
 			}
 			(branch_lvl->parent)->children = v;
-			delete branch_lvl;
+			//delete branch_lvl;
 			if (left_or_right == -1) {
 				return left;
 			} else {
@@ -328,164 +340,201 @@ iNode* iTree::kickOut(iNode *branch_lvl, unsigned int check_key) {
 	}
 }
 
-void iTree::deleteKeyFromTree(unsigned int k) {
+int iTree::deleteKeyFromTree(unsigned int k) {
 	iNode *k_node = new iNode;
+	cout << "d 1" << endl;
 	k_node = findNodeToDel(root, k);
-	deleteKey(k_node, k);
+	cout << "d 2" << endl;
+	if (k_node == nullptr) {
+		cout << "No such key" << endl;
+		return -1;
+	}
+	cout << "d 3" << endl;
+	keyDelAndCheck(k_node, k);
+	cout << "d 4" << endl;
+	return 1;
 }
 
-void iTree::deleteKey(iNode *node, unsigned int k) {
-	int pos_of_key;
-	for (int i = 0; i < node->key.size(); i ++) {
-		if (node->key[i] == k) {pos_of_key = i;}
-	}
-	if (node->children[0] == nullptr) {
-		if (node->key.size() > t) {
-			node->key.erase(node->key.begin() + pos_of_key);
-			node->children.pop_back();
-		} else {
-			int pos_as_a_child = -1;
-			for (int i = 0; i < (node->parent)->key.size(); i ++) {
-				if (k < (node->parent)->key[i]) {
-					pos_as_a_child = i;
-					break;
-				}
-			}
-			bool check = false;
-			int first, second;
-			if (pos_as_a_child == 0) {
-				check = rightLeave(node->parent, pos_of_key, pos_as_a_child);
-				first = pos_as_a_child;
-				second = pos_as_a_child + 1;
-			} else if (pos_as_a_child == -1) {
-				pos_as_a_child = (node->parent)->children.size() - 1;
-				check = leftLeave(node->parent, pos_of_key, pos_as_a_child);
-				first = pos_as_a_child - 1;
-				second = pos_as_a_child;
-			} else {
-				check = leftLeave(node->parent, pos_of_key, pos_as_a_child);
-				if (check != true) {
-					check = rightLeave(node->parent, pos_of_key, pos_as_a_child);
-				}
-				first = pos_as_a_child;
-				second = pos_as_a_child + 1;
-			}
-			if (check == false) {
-				if (unitNodes(node, pos_of_key) == -1) {
-					deleteKey(node, k);
-				} else {
-					deleteKey(node->children[pos_of_key], k);
-				}
-				iNode *parent = new iNode;
-				parent = node->parent;
-				delete parent->children[first];
-				delete parent->children[second];
-			}
+void iTree::checkAfterDeleting(iNode* node, unsigned int del_k) {
+    cout << "c -3" << endl;
+    if (node->key.size() >= t) {
+    	cout << "key size " << node->key.size() << endl;
+    	return;
+    }
+    cout << "c -2" << endl;
+    int pos_as_a_child = 0;
+    cout << "del k " << del_k << endl;
+    cout << "node key size" << node->key.size() << endl;
+    cout << "node par kes size " << node->parent->key.size() << endl;
+    cout << "size of node par child " << pos_as_a_child << endl;;
+    for (int i = 0; i < node->parent->key.size(); i ++) {
+    	cout << "Parent keys " << node->parent->key[i] << endl;
+    	if (del_k > node->parent->key[i]) {
+    		pos_as_a_child = i + 1;
+    		cout << "pos as a child " << pos_as_a_child << endl;
+    	}
+    }
+    cout << "c -1" << endl;
+    bool check = false;
+    if (pos_as_a_child == 0) {
+    	cout << "c 0" << endl;
+    	check = rightLeave(node->parent, pos_as_a_child);
+    	cout << "c 1" << endl;
+    } else if (pos_as_a_child == node->parent->key.size()) {
+    	check = leftLeave(node->parent, pos_as_a_child);
+    } else {
+    	check = leftLeave(node->parent, pos_as_a_child);
+		if (check == false) {
+			check = rightLeave(node->parent, pos_as_a_child);
 		}
-	} else {
-		if (node->children[pos_of_key]->key.size() > t) {
-			iNode *left_branch = new iNode;
-			left_branch = node->children[pos_of_key];
-			node->key[pos_of_key] = left_branch->key[left_branch->key.size() - 1];
-			deleteKey(left_branch, left_branch->key[left_branch->key.size() - 1]);
-		} else if (node->children[pos_of_key + 1]->key.size() > t) {
-			iNode *right_branch = new iNode;
-			right_branch = node->children[pos_of_key + 1];
-			node->key[pos_of_key] = right_branch->key[0];
-			deleteKey(right_branch, right_branch->key[0]);
-		} else {
-			switch (unitNodes(node, pos_of_key)) {
-			case -1:
-				deleteKey(node, k);
-				break;
-			case 0:
-				for (int i = 0; i < (node->parent)->parent->children.size(); i ++) {
+    }
+    cout << "rot check " << check << endl;
+    if (check == false) {
+        if (unitNodes(node->parent, pos_as_a_child) == false) {
+            checkAfterDeleting(node->parent, del_k);
+        } else {return;}
+    }
+}
 
-				}
-			}
-			if (unitNodes(node, pos_of_key) == -1) {
-				deleteKey(node, k);
-			} else {
-				deleteKey(node->children[pos_of_key], k);
-			}
-		}
-	}
+void iTree::keyDelAndCheck(iNode* node, unsigned int k) {
+    int pos_of_key;
+    iNode* subst = new iNode;
+    bool child = false;
+    for (int i = 0; i < node->key.size(); i ++) {
+        if (node->key[i] == k) {pos_of_key = i;}
+    }
+    if (node->children[0] == nullptr) {
+        cout << "Have you been here?" << endl;
+        child = true;
+        node->key.erase(node->key.begin() + pos_of_key);
+        node->children.pop_back();
+    } else {
+        subst = node->children[pos_of_key];
+        while (subst->children[0] != nullptr) {
+            subst = subst->children[subst->children.size() - 1];
+        }
+        node->key[pos_of_key] = subst->key[subst->key.size() - 1];
+        subst->key.pop_back();
+        subst->children.pop_back();
+    }
+    cout << "Really? " << child << endl;
+    cout << node->parent->key.size() << endl;
+    if (child == true) {
+        checkAfterDeleting(node, k);
+    } else {
+        checkAfterDeleting(subst, node->key[pos_of_key]);
+    }
 }
 
 iNode* iTree::findNodeToDel(iNode *node, unsigned int k) {
+	if (node == nullptr) {return nullptr;}
+	cout << "f 1" << endl;
 	for (int i = 0; i < node->key.size(); i ++) {
-		if (k == node->key[i]) {return node;}
+		cout << "f 2 - " << node->key[i] << endl;
+		if (k == node->key[i]) {
+			cout << "I found! " << node->key[i] << endl;
+			return node;
+		}
 	}
+	cout << "f 3" << endl;
 	for (int i = 0; i < node->children.size(); i ++) {
-		findNodeToDel(node->children[i], k);
+		cout << "f 4" << endl;
+		iNode* deep_find = new iNode;
+		deep_find = findNodeToDel(node->children[i], k);
+		if (deep_find != nullptr) {return deep_find;}
+		cout << "f 5" << endl;
 	}
 	return nullptr;
 }
 
-bool iTree::leftLeave(iNode *par, int pos_of_key, int pos_as_a_child) {
-	if (par->children[pos_as_a_child - 1]->key.size() > t) {
-		par->children[pos_as_a_child]->key.erase(par->children[pos_as_a_child]->key.begin() + pos_of_key);
-		par->children[pos_as_a_child]->key.emplace(par->children[pos_as_a_child]->key.begin(), par->key[pos_as_a_child]);
-		par->key[pos_as_a_child] = par->children[pos_as_a_child - 1]->key[par->children[pos_as_a_child - 1]->key.size() - 1];
-		par->children[pos_as_a_child - 1]->key.pop_back();
-		par->children[pos_as_a_child - 1]->children.pop_back();
-		return true;
-	}
-	return false;
+bool iTree::leftLeave(iNode *par, int pos) {
+	cout << "welcome left rot" << endl;
+    cout << "pos " << pos << endl;
+    cout << par->children[pos - 1]->children.size() << endl;
+    if (par->children[pos - 1]->key.size() > t) {
+
+        //rotate keys
+        par->children[pos]->key.emplace(par->children[pos]->key.begin(), par->key[pos - 1]);
+        par->key[pos - 1] = par->children[pos - 1]->key[par->children[pos - 1]->key.size() - 1];
+        par->children[pos - 1]->key.pop_back();
+
+        //rotate children
+        par->children[pos]->children.emplace(par->children[pos]->children.begin(), par->children[pos - 1]->children[par->children[pos - 1]->children.size() - 1]);
+        if (par->children[pos - 1]->children[0] != nullptr) {
+        	cout << "swap child left" << endl;
+        	par->children[pos - 1]->children[par->children[pos - 1]->children.size() - 1]->parent = par->children[pos];
+        }
+        par->children[pos - 1]->children.pop_back();
+        cout << "left good" << endl;
+        return true;
+    }
+    return false;
 }
 
-bool iTree::rightLeave(iNode *par, int pos_of_key, int pos_as_a_child) {
-	if (par->children[pos_as_a_child + 1]->key.size() > t) {
-		par->children[pos_as_a_child]->key.erase(node->key.begin() + pos_of_key);
-		par->children[pos_as_a_child]->key.push_back(par->key[pos_as_a_child]);
-		par->key[pos_as_a_child + 1] = par->children[pos_as_a_child + 1]->key[0];
-		par->children[pos_as_a_child + 1]->key.erase(par->children[pos_as_a_child + 1]->key.begin());
-		par->children[pos_as_a_child + 1]->children.pop_back();
-		return true;
-	}
-	return false;
+bool iTree::rightLeave(iNode *par, int pos) {
+    cout << "welcome right rot" << endl;
+    if (par->children[pos + 1]->key.size() > t) {
+
+        //rotate keys
+        par->children[pos]->key.push_back(par->key[pos]);
+        par->key[pos] = par->children[pos + 1]->key[0];
+        par->children[pos + 1]->key.erase(par->children[pos + 1]->key.begin());
+
+        cout << "rot key ok" << endl;
+
+        //rotate children
+        par->children[pos]->children.push_back(par->children[pos + 1]->children[0]);
+        if (par->children[pos + 1]->children[0] != nullptr) {
+        	cout << "swap child right" << endl;
+        	par->children[pos + 1]->children[0]->parent = par->children[pos];
+        }
+        par->children[pos + 1]->children.erase(par->children[pos + 1]->children.begin());
+
+        cout << "rot children ok" << endl;
+
+        return true;
+    }
+    return false;
 }
 
-int iTree::unitNodes(iNode *par, int pos) {
-	iNode *unity = new iNode;
-	for (int i = 0; i < t; i ++) {
+bool iTree::unitNodes(iNode* par, int pos) {
+	iNode* unity = new iNode;
+	unity->is_it_root = false;
+	unity->parent = par;
+	for (int i = 0; i < par->children[pos]->key.size(); i ++) {
 		unity->key.push_back(par->children[pos]->key[i]);
 		unity->children.push_back(par->children[pos]->children[i]);
+		if (par->children[pos]->children[i] != nullptr) {
+			par->children[pos]->children[i]->parent = unity;
+		}
 	}
-	unity->children.push_back(par->children[pos]->children[t]);
+	unity->children.push_back(par->children[pos]->children[par->children[pos]->children.size() - 1]);
+	if (par->children[pos]->children[par->children[pos]->children.size() - 1] != nullptr) {
+		par->children[pos]->children[par->children[pos]->children.size() - 1]->parent = unity;
+	}
 	unity->key.push_back(par->key[pos]);
-	for (int i = 0; i < t; i ++) {
-		unity->key.push_back((par->children[pos + 1])->key[i]);
+	for (int i = 0; i < par->children[pos + 1]->key.size(); i ++) {
+		unity->key.push_back(par->children[pos + 1]->key[i]);
 		unity->children.push_back(par->children[pos + 1]->children[i]);
+		if (par->children[pos + 1]->children[i] != nullptr) {
+			par->children[pos + 1]->children[i]->parent = unity;
+		}
 	}
-	unity->children.push_back(par->children[pos + 1]->children[t]);
+	unity->children.push_back(par->children[pos + 1]->children[par->children[pos + 1]->children.size() - 1]);
+	if (par->children[pos + 1]->children[par->children[pos + 1]->children.size() - 1] != nullptr) {
+		par->children[pos + 1]->children[par->children[pos + 1]->children.size() - 1]->parent = unity;
+	}
 	par->key.erase(par->key.begin() + pos);
-	vector<iNode*> v;
+	par->children.erase(par->children.begin() + pos);
+	par->children.erase(par->children.begin() + pos);
+	par->children.emplace(par->children.begin() + pos, unity);
 	if ((par->is_it_root == true) && (par->key.size() == 0)) {
 		unity->is_it_root = true;
-		par = unity;
-		return -1;
-	} else if (par->key.size() == 0) {
-		par->children.clear();
-		par->children.push_back(unity);
-		return 0;
-	} else if ((par->key.size() < t) && (par->is_it_root == false)){
-		for (int i = 0; i < (par->parent)->key.size(); i ++) {
-
-		}
-	} else {
-		unity->is_it_root = false;
-		for (int i = 0; i < par->children.size(); i ++) {
-			if (i != pos) {
-				v.push_back(par->children[i]);
-			} else {
-				v.push_back(unity);
-				i ++;
-			}
-		}
-		par->children = v;
-		return 1;
+		root = unity;
+		unity->parent = nullptr;
+		return true;
 	}
+	return false;
 }
 
 void iTree::printTree(iNode *node) {
@@ -494,11 +543,13 @@ void iTree::printTree(iNode *node) {
 		if (node->children[i] == nullptr) {
 			if (i < node->key.size()) {
 				cout << node->key[i] << " ";
+				if (node->is_it_root == false) {cout << "(" << node->parent->key[0] << ") ";}
 			}
 		} else {
 			printTree(node->children[i]);
 			if (i < node->key.size()) {
 				cout << node->key[i] << " ";
+				if (node->is_it_root == false) {cout << "(" << node->parent->key[0] << ") ";}
 			}
 		}
 	}
@@ -509,6 +560,12 @@ int main() {
 	string com;
 	iTree T;
 	unsigned int key;
+	ifstream input("f_r.txt");
+	for (int i = 0; i < 15; i ++) {
+		input >> key;
+		T.addNewNode(T.root, key, 5);
+	}
+	input.close();
 	do {
 		cin >> com;
 		if (com == "add") {
